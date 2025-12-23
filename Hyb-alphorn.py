@@ -2,28 +2,29 @@
 #   /\ |  |__)|__|/  \|__)|\ | 
 #  /--\|__|   |  |\__/| \ | \| 
                             
-# 	   g		 _▒▒▒_
+# 	   g		     _▒▒▒_
 # 	   ' 		_\'O'/
 #    c	  t	   /\__|
 # 	  '	  '   /	   |
 # 	    a 	 /    / \
 # 	     '_ /    /   \
 # 	     \_/   _/    _\
-                                                                
+                                                               
 #  v0.1 Jones & Newmarch 2025 ==============================================
 #  A longread pipeline for homoeolog recovery, and more!
 
-# TODO: file stats
-
+# TODO: logging
+    
 import os
 #import sys
 #import time
 import argparse
-import multiprocessing
+#import multiprocessing
 
 import pandas as pd
+import funcs_phase as phase
 import funcs_general as funcs
-import funcs_parse_asm as parse_asm
+import funcs_parse_asm as assembly
 
 if __name__ == '__main__':
     
@@ -36,8 +37,8 @@ if __name__ == '__main__':
                     action = 'version',
                     version = 'v0.1')
     
-    parser.add_argument('-s', '--sample_list',
-                    help = 'A text document containing the names of samples to runs, and corresponding .fastq files.\nSee the wiki for examples.',
+    parser.add_argument('-s', '--sample_file',
+                    help = 'A yaml file containing the names of samples to runs, and corresponding .fastq files.\nSee the wiki for examples.',
                     required = True)
     
     parser.add_argument('-r', '--reference',
@@ -74,36 +75,88 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
     
-    samples, data = funcs.parse_samples(args.sample_list)
+    samples, phase_info = funcs.parse_samples_yaml(args.sample_file)
     loci_list = funcs.get_loci_names(args.reference)
+    
+    initial_sample_stats = []
+    full_sample_stats = []
     
     if not os.path.exists(args.output):
         #print('making output folder')
         os.makedirs(args.output)       
     
-    for i in range(len(samples)):
+    for sample, data in samples.items():
         
-        if not os.path.exists(f'{args.output}/{samples[i]}'): os.makedirs(f'{args.output}/{samples[i]}')       
+        # MAIN FUNCTION WHERE WE CAN RUN PARALELL SAMPLES?
+        
+        if not os.path.exists(f'{args.output}/{sample}'): os.makedirs(f'{args.output}/{sample}')
         
         if not args.skip_alignment:
         
-            funcs.initial_alignment(samples[i], data[i], args.reference, args.output)
+            funcs.make_alignment(sample, data, args.reference, f'{args.output}/{sample}/{sample}_initial.bam')
             
-            initial_map_stats = funcs.get_map_stats(samples[i], args.output)
+            initial_map_stats = funcs.get_map_stats(f'{args.output}/{sample}/{sample}_initial.bam')
             initial_map_stats = initial_map_stats.split('\n')[:-1]
             initial_map_stats = [line.split('\t') for line in initial_map_stats]
             initial_map_stats = pd.DataFrame(data = initial_map_stats, columns = ['seq_name', 'seq_len', 'mapped_reads', 'unmapped_reads'])
             
+            initial_map_stats[['seq_len', 'mapped_reads', 'unmapped_reads']] = initial_map_stats[['seq_len', 'mapped_reads', 'unmapped_reads']].apply(pd.to_numeric)
+            
+            initial_map_stats.to_csv(f'{args.output}/{sample}/{sample}_initial_stats.tsv', sep = '\t')
+            
             inital_sum_mapped   = initial_map_stats['mapped_reads'].astype(int).sum()
-            inital_sum_ummapped = initial_map_stats['unmapped_reads'].astype(int).sum()        
+            inital_sum_ummapped = initial_map_stats['unmapped_reads'].astype(int).sum()      
+            
+            initial_sample_stats.append([sample, inital_sum_mapped, inital_sum_ummapped, inital_sum_mapped/inital_sum_ummapped, int(initial_map_stats['mapped_reads'].gt(1).sum())])
         
         if not args.skip_assembly:
             
-            funcs.split_to_gene_dirs(samples[i], loci_list, args.output)
-            funcs.assemble_loci(samples[i], loci_list, args.output, 8)
+            assembly.split_to_gene_dirs(sample, loci_list, args.output)
+            assembly.assemble_loci(sample, loci_list, args.output, 8)
             
-    parse_asm.parse_flye_logs(samples, loci_list, args.output, '')
-    parse_asm.resolve_multi_loci(args.reference, 0.75, args.output)
+    assembly.parse_flye_logs(samples, loci_list, args.output, '')
+    assembly.resolve_multi_loci(args.reference, 0.75, args.output)
     
     funcs.concat_sequences(samples, args.output)
-    parse_asm.trim_assembilies(samples, 500, args.reference, args.output)
+    assembly.trim_assembilies(samples, 500, args.reference, args.output)
+
+    if not args.skip_phasing:
+        
+        for sample, data in samples.items():
+            
+            phase_n = phase_info.get(f'{sample}')
+            
+            funcs.make_alignment(sample, data, f'{args.output}/{sample}/{sample}_trim.fasta', f'{args.output}/{sample}/{sample}_full.bam')
+            
+            full_map_stats = funcs.get_map_stats(f'{args.output}/{sample}/{sample}_full.bam')
+            
+            full_map_stats = full_map_stats.split('\n')[:-1]
+            full_map_stats = [line.split('\t') for line in full_map_stats]
+            full_map_stats = pd.DataFrame(data = full_map_stats, columns = ['seq_name', 'seq_len', 'mapped_reads', 'unmapped_reads'])
+            
+            full_map_stats[['seq_len', 'mapped_reads', 'unmapped_reads']] = full_map_stats[['seq_len', 'mapped_reads', 'unmapped_reads']].apply(pd.to_numeric)
+            
+            full_map_stats.to_csv(f'{args.output}/{sample}/{sample}_full_stats.tsv', sep = '\t')
+            
+            full_sum_mapped   = full_map_stats['mapped_reads'].astype(int).sum()
+            full_sum_ummapped = full_map_stats['unmapped_reads'].astype(int).sum()      
+            
+            full_sample_stats.append([sample, full_sum_mapped, full_sum_ummapped, full_sum_mapped/full_sum_ummapped, int(full_map_stats['mapped_reads'].gt(1).sum())])
+            
+            phase.call_snps(sample, phase_n, args.threads, args.output)
+            phase.phase_snps(sample, phase_n, args.threads, args.output)
+            phase.haplotag(sample, phase_n, args.threads, args.output)
+            
+    initial_sample_stats_df = pd.DataFrame(initial_sample_stats, columns = ['sample', 
+                                           'initial_mapped_reads', 
+                                           'initial_unamapped_reads', 
+                                           'initial_percent_mapped',
+                                           'initial_count_loci'])
+    full_sample_stats_df = pd.DataFrame(full_sample_stats, columns = ['sample', 
+                                           'full_mapped_reads', 
+                                           'full_unamapped_reads',
+                                           'full_percent_mapped',
+                                           'full_count_loci'])
+    
+    initial_sample_stats_df.to_csv(f'{args.output}/inital_alignment_stats.tsv', sep = '\t', index = False)
+    full_sample_stats_df.to_csv(f'{args.output}/final_alignment_stats.tsv', sep = '\t', index = False)
