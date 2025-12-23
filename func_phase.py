@@ -46,3 +46,11 @@ def haplotag(sample, copy_number, threads, out_dir):
         subprocess.run(samtools_index_command, shell = True, check = True)
         
     return()
+
+def phased_consensus(sample, copy_number, loci_list, out_dir):
+    
+    for loci in loci_list:
+        for n in range(1, copy_number + 1):
+            print()
+    
+    return()
