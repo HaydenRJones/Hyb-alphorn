@@ -47,10 +47,11 @@ def haplotag(sample, copy_number, threads, out_dir):
         
     return()
 
-def phased_consensus(sample, copy_number, loci_list, out_dir):
+def phased_consensus(sample, copy_number, loci_list, out_dir): # TODO: Finish this!
     
     for loci in loci_list:
         for n in range(1, copy_number + 1):
-            print()
-    
+            consensus_command = f'samtools consensus --mode simple --ambig --call-fract 0.40 {out_dir}/{sample}/{sample}_H{n}.bam -r {loci} -o {out_dir}/{sample}/{loci}/{sample}_H{n}.fasta'
+            subprocess.run(consensus_command, shell = True, check = True)
+        
     return()

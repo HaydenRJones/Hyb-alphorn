@@ -5,7 +5,7 @@
 import os
 import yaml
 import subprocess
-#import pandas as pd
+import pandas as pd
 #from Bio import SeqIO
 
 def parse_samples_yaml(sample_file):  # This function is really a bit dumb. 
@@ -27,7 +27,7 @@ def parse_samples_yaml(sample_file):  # This function is really a bit dumb.
     
     return(sample_dict, phase_dict)
 
-def parse_samples(sample_file):
+def parse_samples(sample_file): # REMOVE THIS!
     
     file  = open(sample_file, 'r')
     lines = file.readlines()
@@ -63,12 +63,17 @@ def make_alignment(sample, sample_data, ref_file, out_path):
     
     return()
     
-def get_map_stats(bam_path):
+def get_map_stats(bam_path): # TODO: move more of the actually processing into this function rather than the main loop!
     
     idxstats_command = f'samtools idxstats {bam_path}'
     stats = subprocess.run(idxstats_command, shell = True, capture_output = True, text = True)
     
-    return(stats.stdout)
+    formated_stats = stats.stdout.split('\n')[:-1]
+    formated_stats = [line.split('\t') for line in formated_stats]
+    formated_stats_df = pd.DataFrame(data = formated_stats, columns = ['seq_name', 'seq_len', 'mapped_reads', 'unmapped_reads'])
+    formated_stats_df[['seq_len', 'mapped_reads', 'unmapped_reads']] = formated_stats[['seq_len', 'mapped_reads', 'unmapped_reads']].apply(pd.to_numeric)
+
+    return(formated_stats_df)
 
 def concat_sequences(samples, out_dir):
     

@@ -162,6 +162,7 @@ def find_partial_contigs(hit_table, length_thresh):
     
     return()
 
+# TODO: 
 # def plot_cigar(loci, cigar_array, contig_list, query_length):
 #     return()
 

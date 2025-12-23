@@ -66,11 +66,13 @@ if __name__ == '__main__':
     
     parser.add_argument('--skip_assembly',
                     help = 'Skip the assembly step',
-                    action = argparse.BooleanOptionalAction)
+                    action = argparse.BooleanOptionalAction,
+                    default = False)
 
     parser.add_argument('--skip_phasing',
                     help = 'Skip the phasing step',
-                    action = argparse.BooleanOptionalAction)
+                    action = argparse.BooleanOptionalAction,
+                    default = False)
 
     
     args = parser.parse_args()
@@ -80,6 +82,8 @@ if __name__ == '__main__':
     
     initial_sample_stats = []
     full_sample_stats = []
+    
+    if args.output[-1] == '/': args.output = args.output[0:-1] # remove any trailing slashes from the output
     
     if not os.path.exists(args.output):
         #print('making output folder')
@@ -96,23 +100,15 @@ if __name__ == '__main__':
             funcs.make_alignment(sample, data, args.reference, f'{args.output}/{sample}/{sample}_initial.bam')
             
             initial_map_stats = funcs.get_map_stats(f'{args.output}/{sample}/{sample}_initial.bam')
-            initial_map_stats = initial_map_stats.split('\n')[:-1]
-            initial_map_stats = [line.split('\t') for line in initial_map_stats]
-            initial_map_stats = pd.DataFrame(data = initial_map_stats, columns = ['seq_name', 'seq_len', 'mapped_reads', 'unmapped_reads'])
-            
-            initial_map_stats[['seq_len', 'mapped_reads', 'unmapped_reads']] = initial_map_stats[['seq_len', 'mapped_reads', 'unmapped_reads']].apply(pd.to_numeric)
-            
             initial_map_stats.to_csv(f'{args.output}/{sample}/{sample}_initial_stats.tsv', sep = '\t')
-            
             inital_sum_mapped   = initial_map_stats['mapped_reads'].astype(int).sum()
             inital_sum_ummapped = initial_map_stats['unmapped_reads'].astype(int).sum()      
-            
             initial_sample_stats.append([sample, inital_sum_mapped, inital_sum_ummapped, inital_sum_mapped/inital_sum_ummapped, int(initial_map_stats['mapped_reads'].gt(1).sum())])
         
         if not args.skip_assembly:
             
             assembly.split_to_gene_dirs(sample, loci_list, args.output)
-            assembly.assemble_loci(sample, loci_list, args.output, 8)
+            assembly.assemble_loci(sample, loci_list, args.output, args.threads)
             
     assembly.parse_flye_logs(samples, loci_list, args.output, '')
     assembly.resolve_multi_loci(args.reference, 0.75, args.output)
@@ -129,18 +125,9 @@ if __name__ == '__main__':
             funcs.make_alignment(sample, data, f'{args.output}/{sample}/{sample}_trim.fasta', f'{args.output}/{sample}/{sample}_full.bam')
             
             full_map_stats = funcs.get_map_stats(f'{args.output}/{sample}/{sample}_full.bam')
-            
-            full_map_stats = full_map_stats.split('\n')[:-1]
-            full_map_stats = [line.split('\t') for line in full_map_stats]
-            full_map_stats = pd.DataFrame(data = full_map_stats, columns = ['seq_name', 'seq_len', 'mapped_reads', 'unmapped_reads'])
-            
-            full_map_stats[['seq_len', 'mapped_reads', 'unmapped_reads']] = full_map_stats[['seq_len', 'mapped_reads', 'unmapped_reads']].apply(pd.to_numeric)
-            
             full_map_stats.to_csv(f'{args.output}/{sample}/{sample}_full_stats.tsv', sep = '\t')
-            
             full_sum_mapped   = full_map_stats['mapped_reads'].astype(int).sum()
             full_sum_ummapped = full_map_stats['unmapped_reads'].astype(int).sum()      
-            
             full_sample_stats.append([sample, full_sum_mapped, full_sum_ummapped, full_sum_mapped/full_sum_ummapped, int(full_map_stats['mapped_reads'].gt(1).sum())])
             
             phase.call_snps(sample, phase_n, args.threads, args.output)
