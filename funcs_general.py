@@ -3,9 +3,29 @@
 # HJ - XX/09/25
 
 import os
+import yaml
 import subprocess
 #import pandas as pd
 #from Bio import SeqIO
+
+def parse_samples_yaml(sample_file):  # This function is really a bit dumb. 
+                                    # It will do for now but it should be rewritten at some point
+    samples = []
+    data    = []
+    phase_n = []
+    
+    with open(sample_file, 'r') as file:
+        sample_data = yaml.safe_load(file)
+        
+    for entry in sample_data: #print(sample)
+        samples.append(entry.get('id'))
+        data.append(entry.get('data'))
+        phase_n.append(entry.get('phase_n'))
+    
+    sample_dict = dict(zip(samples, data))
+    phase_dict  = dict(zip(samples, phase_n))
+    
+    return(sample_dict, phase_dict)
 
 def parse_samples(sample_file):
     
@@ -21,7 +41,10 @@ def parse_samples(sample_file):
         samples.append(split_line[0].rstrip()) # Took me forever to catch these damn newlines!
         data.append(split_line[1].rstrip())    # :(((((
     
-    return(samples, data)
+    sample_dict = dict(zip(samples, data))
+    
+    return(sample_dict)
+    #return(samples, data)
     
 def get_loci_names(ref_file):
     
@@ -32,39 +55,20 @@ def get_loci_names(ref_file):
     
     return(loci)
     
-def initial_alignment(sample, sample_data, ref_file, out_dir):
+def make_alignment(sample, sample_data, ref_file, out_path):
     
     #minimap_command = f'minimap2 -ax map-ont {ref_file} {sample_data} | samtools view -b -F 4 | samtools sort -o {out_dir}/{sample_name}.bam --write-index -'
-    minimap_command = f'minimap2 -ax map-ont {ref_file} {sample_data} | samtools sort -o {out_dir}/{sample}/{sample}_initial.bam --write-index -'
+    minimap_command = f'minimap2 -ax map-ont {ref_file} {sample_data} | samtools sort -o {out_path} --write-index -'
     subprocess.run(minimap_command, shell = True, stdout = subprocess.PIPE, check = True)
     
     return()
     
-def get_map_stats(sample, out_dir):
+def get_map_stats(bam_path):
     
-    idxstats_command = f'samtools idxstats {out_dir}/{sample}/{sample}_initial.bam'
+    idxstats_command = f'samtools idxstats {bam_path}'
     stats = subprocess.run(idxstats_command, shell = True, capture_output = True, text = True)
     
     return(stats.stdout)
-
-def split_to_gene_dirs(sample, loci_list, out_dir):
-    
-    for loci in loci_list:
-        
-        if not os.path.exists(f'{out_dir}/{sample}/{loci}'): os.makedirs(f'{out_dir}/{sample}/{loci}')  
-        
-        split_command = f'samtools view -b {out_dir}/{sample}/{sample}_initial.bam {loci} | samtools fastq > {out_dir}/{sample}/{loci}/{loci}.fastq'
-        subprocess.run(split_command, shell = True, stdout = subprocess.PIPE)
-        
-    return()
-
-def assemble_loci(sample, loci_list, out_dir, threads): # TODO: other flye options
-    
-    for loci in loci_list:
-        flye_command = f'flye -t {threads} --iterations 3 --nano-hq {out_dir}/{sample}/{loci}/{loci}.fastq -o {out_dir}/{sample}/{loci}'
-        subprocess.run(flye_command, shell = True)
-        
-    return()
 
 def concat_sequences(samples, out_dir):
     
@@ -73,3 +77,7 @@ def concat_sequences(samples, out_dir):
         subprocess.run(concat_command, shell = True)
     
     return()
+
+# TODO
+# def parallel_samples():
+#     return()
