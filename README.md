@@ -16,13 +16,18 @@ A longread pipeline for homoeolog recovery, and more!
   - argparse
   - #seaborn
   - #matplotlib
+
 ## Setup
+Installation and setup:
 ```
 conda create -n alphorn
+conda activate alphorn
 conda install python pandas numpy mappy whatshap freebayes minimap2 samtools
-git clone ... ; cd Hyb-alphorn
-python Hyb-alphorn.py ...
+git clone https://github.com/HaydenRJones/Hyb-alphorn.git 
+cd Hyb-alphorn
+python Hyb-alphorn.py -s SAMPLE.YAML -r REFERENCE.FASTA
 ```
+
 ## Usage
 ### Command line arguments
 - `-v, --version` print version info and quit
@@ -31,5 +36,13 @@ See the examples for format
 - `-r, --reference` Target loci reference list in fasta format
 - `-o, --output` Directory to the save data to.
 Defaults to ./output/
-- `-t, --threads` Total number of threads to use.\nThis is split between samples when -p is set.
+- `-t, --threads` Total number of threads to use.
+This is split between samples when -p is set.
 Default value is 1
+
+### Example sample file
+```
+id: xxx
+data: xxx
+phase_n: xxx
+```
