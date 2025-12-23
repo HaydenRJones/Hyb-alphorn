@@ -5,6 +5,8 @@
 # Trim assemblies down down overhang from the reference
 # HJ - XX/09/25
 
+import os
+import subprocess
 import numpy as np
 import mappy as mp
 import pandas as pd
@@ -15,6 +17,25 @@ import pandas as pd
 from Bio import SeqIO
 
 ###############################################################################
+
+def split_to_gene_dirs(sample, loci_list, out_dir):
+    
+    for loci in loci_list:
+        
+        if not os.path.exists(f'{out_dir}/{sample}/{loci}'): os.makedirs(f'{out_dir}/{sample}/{loci}')  
+        
+        split_command = f'samtools view -b {out_dir}/{sample}/{sample}_initial.bam {loci} | samtools fastq > {out_dir}/{sample}/{loci}/{loci}.fastq'
+        subprocess.run(split_command, shell = True, stdout = subprocess.PIPE)
+        
+    return()
+
+def assemble_loci(sample, loci_list, out_dir, threads): # TODO: other flye options
+    
+    for loci in loci_list:
+        flye_command = f'flye -t {threads} --iterations 3 --nano-hq {out_dir}/{sample}/{loci}/{loci}.fastq -o {out_dir}/{sample}/{loci}'
+        subprocess.run(flye_command, shell = True)
+        
+    return()
 
 def get_asm_info(loci, sample, out_dir):
     
@@ -63,7 +84,7 @@ def parse_flye_logs(sample_list, loci_list, out_dir, keep_singletons): # TODO: k
 
 ###############################################################################
 
-def make_alignment(loci, sample, ref_list, out_dir):
+def make_single_alignment(loci, sample, ref_list, out_dir):
     
     index = mp.Aligner(f'{out_dir}/{sample}/{loci}/assembly.fasta', preset = 'splice')
     
@@ -179,7 +200,7 @@ def resolve_multi_loci(ref_file, length_thresh, out_dir):
                         loci_contigs.append([loci, contig, 'rejected'])
                     loci_contigs = pd.DataFrame(loci_contigs, columns = ['LOCI', 'CONTIG', 'OUTCOME'])
                     
-                    hit_table = make_alignment(loci, sample, ref_list, out_dir)
+                    hit_table = make_single_alignment(loci, sample, ref_list, out_dir)
                     for contig in list(hit_table['CONTIG']):
                         loci_contigs.loc[loci_contigs['CONTIG'] == contig, 'OUTCOME'] = 'mapped'
                     
@@ -268,8 +289,8 @@ def trim_assembilies(samples, trim_length, reference, out_dir):
             hit_row = hit_table.loc[hit_table['contig_name'] == name]
             
             if len(hit_row) >= 1:
-                start = max(0, hit_row.iloc[0]['map_start'] - trim_length)
-                stop  = min(hit_row.iloc[0]['map_end'] + trim_length, hit_row.iloc[0]['contig_length'])
+                start = max(0, int(hit_row.iloc[0]['map_start']) - trim_length)
+                stop  = min(int(hit_row.iloc[0]['map_end']) + trim_length, int(hit_row.iloc[0]['contig_length']))
                 
                 new_file.append(f'>{name}\n{seq[start:stop]}\n')
                 with open(f'{out_dir}/{sample}/{sample}_trim.fasta', 'w') as file:
