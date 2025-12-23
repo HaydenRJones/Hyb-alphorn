@@ -1,0 +1,6 @@
+-   id: 'sample_1'
+    data: './data/example/sample_1.fastq'
+    phase_n: 2
+-   id: 'sample_2'
+    data: './data/example/sample_2.fq.gz'
+    phase_n: 3
