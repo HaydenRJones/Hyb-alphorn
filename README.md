@@ -1,5 +1,12 @@
 # Hyb-alphorn
-A longread pipeline for homoeolog recovery, and more!
+**A longread pipeline for homoeolog recovery, and more!**
+Heavily inspired by [Hybpiper](https://github.com/mossmatters/HybPiper), but designed for use with longread (ONT / PacBio) data.
+
+Longread based assembilies enable to recovery of whole gene sequences, including introns - unlike typical hybseq aproaches which favor the recovery of exons only. 
+This tool also considers cases where there are multiple copies of genes due to allo- / autopolyploidy and tried to split them using SNPs.
+By doing this we can potentially avoid chimeric gene assembilies that may result from short read only assembilies of multi-copy loci.
+
+For a more complete discussion of the methods used in this tool, and the advantages of this approach, see (BIORXIV LINK!)[XXX]
 
 ## Dependencies
 - Linux/WSL2 or macOS[^*]
@@ -50,7 +57,9 @@ Defaults to 1
 Sample data is formated as a .yaml file, with the following structure:
 
 id - "sample name"
+
 data - "full or relative path to fastq reads for this sample"
+
 phase_n - "number of copies to phase into"
 
 Example file:
