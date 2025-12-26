@@ -29,20 +29,41 @@ python Hyb-alphorn.py -s SAMPLE.YAML -r REFERENCE.FASTA
 ```
 
 ## Usage
+
 ### Command line arguments
 - `-v, --version` print version info and quit
 - `-s, --sample_file` A yaml file containing the names of samples to runs, and corresponding .fastq files.
-See the examples for format
+See the examples for specific format
 - `-r, --reference` Target loci reference list in fasta format
 - `-o, --output` Directory to the save data to.
 Defaults to ./output/
 - `-t, --threads` Total number of threads to use.
 This is split between samples when -p is set.
-Default value is 1
+Defaults to 1
+
+(optional arguments)
+- `--skip_alignment`
+- `--skip_assembly`
+- `--skip_phasing`
 
 ### Example sample file
+Sample data is formated as a .yaml file, with the following structure:
+
+id - "sample name"
+data - "full or relative path to fastq reads for this sample"
+phase_n - "number of copies to phase into"
+
+Example file:
 ```
-id: xxx
-data: xxx
-phase_n: xxx
+-   id: 'sample_1'
+    data: './data/example/sample_1.fastq'
+    phase_n: 2
+-   id: 'sample_2'
+    data: './data/example/sample_2.fq.gz'
+    phase_n: 3
+...
+-   id: 'sample_n'
+    data: './data/example/sample_n.fq'
+    phase_n: 4
+
 ```
