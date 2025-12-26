@@ -50,7 +50,9 @@ Defaults to 1
 Sample data is formated as a .yaml file, with the following structure:
 
 id - "sample name"
+
 data - "full or relative path to fastq reads for this sample"
+
 phase_n - "number of copies to phase into"
 
 Example file:
