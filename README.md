@@ -1,5 +1,6 @@
 # Hyb-alphorn
-**A longread pipeline for homoeolog recovery, and more!**
+*A longread pipeline for homoeolog recovery, and more!*
+
 Heavily inspired by [Hybpiper](https://github.com/mossmatters/HybPiper), but designed for use with longread (ONT / PacBio) data.
 
 Longread based assembilies enable to recovery of whole gene sequences, including introns - unlike typical hybseq aproaches which favor the recovery of exons only. 
@@ -21,8 +22,6 @@ For a more complete discussion of the methods used in this tool, and the advanta
   - numpy
   - mappy
   - argparse
-  - #seaborn
-  - #matplotlib
 
 ## Setup
 Installation and setup:
@@ -54,13 +53,11 @@ Defaults to 1
 - `--skip_phasing`
 
 ### Example sample file
-Sample data is formated as a .yaml file, with the following structure:
+Sample data is formated as a .yaml file. There are no limits to the number of samples that can be incldued in the file. Each sample must have the following information:
 
-id - "sample name"
-
-data - "full or relative path to fastq reads for this sample"
-
-phase_n - "number of copies to phase into"
+- `id` sample name
+- `data` full or relative path to fastq reads for this sample
+- `phase_n` number of copies to phase into. If this is zero phasing for this sample will be skipped
 
 Example file:
 ```
