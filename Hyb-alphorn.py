@@ -31,11 +31,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
     prog = 'Hyb-alphorn.py',
     description = 'a pipeline for processing and phasing HYBSeq enriched nanopore longreads',
-    epilog = 'v0.1 - HJ & SN 15/09/25')
+    epilog = 'v0.1 - HJ & SN 31/12/25')
     
     parser.add_argument('-v', '--version',
                     action = 'version',
-                    version = 'v0.1')
+                    version = 'Hyb-alphorn : v0.1 - HJ & SN 31/12/25')
     
     parser.add_argument('-s', '--sample_file',
                     help = 'A yaml file containing the names of samples to runs, and corresponding .fastq files.\nSee the wiki for examples.',
@@ -86,35 +86,19 @@ if __name__ == '__main__':
     if args.output[-1] == '/': args.output = args.output[0:-1] # remove any trailing slashes from the output
     
     if not os.path.exists(args.output):
-        #print('making output folder')
         os.makedirs(args.output)       
     
     for sample, data in samples.items():
         
-        # MAIN FUNCTION WHERE WE CAN RUN PARALELL SAMPLES?
+# MAIN FUNCTION WHERE WE CAN RUN PARALELL SAMPLES?
         
-        if not os.path.exists(f'{args.output}/{sample}'): os.makedirs(f'{args.output}/{sample}')
-        
-        if not args.skip_alignment:
-        
-            funcs.make_alignment(sample, data, args.reference, f'{args.output}/{sample}/{sample}_initial.bam')
-            
-            initial_map_stats = funcs.get_map_stats(f'{args.output}/{sample}/{sample}_initial.bam')
-            initial_map_stats.to_csv(f'{args.output}/{sample}/{sample}_initial_stats.tsv', sep = '\t')
-            inital_sum_mapped   = initial_map_stats['mapped_reads'].astype(int).sum()
-            inital_sum_ummapped = initial_map_stats['unmapped_reads'].astype(int).sum()      
-            initial_sample_stats.append([sample, inital_sum_mapped, inital_sum_ummapped, inital_sum_mapped/inital_sum_ummapped, int(initial_map_stats['mapped_reads'].gt(1).sum())])
-        
-        if not args.skip_assembly:
-            
-            assembly.split_to_gene_dirs(sample, loci_list, args.output)
-            assembly.assemble_loci(sample, loci_list, args.output, args.threads)
+        initial_sample_stats.append(funcs.run_sample_alingment(sample, data, args.output, args.reference, loci_list, args.skip_alignment, args.skip_assembly, 'initial', args.threads))
             
     assembly.parse_flye_logs(samples, loci_list, args.output, '')
     assembly.resolve_multi_loci(args.reference, 0.75, args.output)
     
     funcs.concat_sequences(samples, args.output)
-    assembly.trim_assembilies(samples, 500, args.reference, args.output)
+    assembly.trim_assembilies(samples, 500, args.reference, args.output) # TODO : add option to select overhang
 
     if not args.skip_phasing:
         
@@ -122,14 +106,9 @@ if __name__ == '__main__':
             
             phase_n = phase_info.get(f'{sample}')
             
-            funcs.make_alignment(sample, data, f'{args.output}/{sample}/{sample}_trim.fasta', f'{args.output}/{sample}/{sample}_full.bam')
+            full_sample_stats.append(funcs.run_sample_alingment(sample, data, args.output, f'{args.output}/{sample}/{sample}_trim.fasta', loci_list, False, True, 'full', args.threads))
             
-            full_map_stats = funcs.get_map_stats(f'{args.output}/{sample}/{sample}_full.bam')
-            full_map_stats.to_csv(f'{args.output}/{sample}/{sample}_full_stats.tsv', sep = '\t')
-            full_sum_mapped   = full_map_stats['mapped_reads'].astype(int).sum()
-            full_sum_ummapped = full_map_stats['unmapped_reads'].astype(int).sum()      
-            full_sample_stats.append([sample, full_sum_mapped, full_sum_ummapped, full_sum_mapped/full_sum_ummapped, int(full_map_stats['mapped_reads'].gt(1).sum())])
-            
+# TODO : replace the next bit with a single function
             phase.call_snps(sample, phase_n, args.threads, args.output)
             phase.phase_snps(sample, phase_n, args.threads, args.output)
             phase.haplotag(sample, phase_n, args.threads, args.output)
