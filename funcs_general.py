@@ -6,6 +6,7 @@ import os
 import yaml
 import subprocess
 import pandas as pd
+import funcs_parse_asm as assembly
 #from Bio import SeqIO
 
 def parse_samples_yaml(sample_file):  # This function is really a bit dumb. 
@@ -71,7 +72,7 @@ def get_map_stats(bam_path): # TODO: move more of the actually processing into t
     formated_stats = stats.stdout.split('\n')[:-1]
     formated_stats = [line.split('\t') for line in formated_stats]
     formated_stats_df = pd.DataFrame(data = formated_stats, columns = ['seq_name', 'seq_len', 'mapped_reads', 'unmapped_reads'])
-    formated_stats_df[['seq_len', 'mapped_reads', 'unmapped_reads']] = formated_stats[['seq_len', 'mapped_reads', 'unmapped_reads']].apply(pd.to_numeric)
+    formated_stats_df[['seq_len', 'mapped_reads', 'unmapped_reads']] = formated_stats_df[['seq_len', 'mapped_reads', 'unmapped_reads']].apply(pd.to_numeric)
 
     return(formated_stats_df)
 
@@ -83,6 +84,22 @@ def concat_sequences(samples, out_dir):
     
     return()
 
-# TODO
-# def parallel_samples():
-#     return()
+def run_sample_alingment(sample, data, output, reference, loci_list, skip_alignment, skip_assembly, suffix, threads):
+    
+    if not os.path.exists(f'{output}/{sample}'): os.makedirs(f'{output}/{sample}')
+    
+    if not skip_alignment:
+    
+        make_alignment(sample, data, reference, f'{output}/{sample}/{sample}_{suffix}.bam')
+        
+        map_stats = get_map_stats(f'{output}/{sample}/{sample}_{suffix}.bam')
+        map_stats.to_csv(f'{output}/{sample}/{sample}_{suffix}_stats.tsv', sep = '\t')
+        sum_mapped   = map_stats['mapped_reads'].astype(int).sum()
+        sum_ummapped = map_stats['unmapped_reads'].astype(int).sum()      
+        sample_stats = [sample, sum_mapped, sum_ummapped, sum_mapped/sum_ummapped, int(map_stats['mapped_reads'].gt(1).sum())]
+    
+    if not skip_assembly:
+        assembly.split_to_gene_dirs(sample, loci_list, output)
+        assembly.assemble_loci(sample, loci_list, output, threads)
+        
+    return(sample_stats)
