@@ -16,19 +16,21 @@ For a more complete discussion of the methods used in this tool, and the advanta
 - [freebayes](https://arxiv.org/abs/1207.3907)
 - [minimap2](https://academic.oup.com/bioinformatics/article/34/18/3094/4994778?login=false)
 - [samtools](https://pubmed.ncbi.nlm.nih.gov/33590861/)
+- flye
   
 - Python >= 3.11
   - pandas
   - numpy
   - mappy
   - argparse
+  - pyyaml
 
 ## Setup
 Installation and setup:
 ```
 conda create -n alphorn
 conda activate alphorn
-conda install python pandas numpy mappy whatshap freebayes minimap2 samtools
+conda install python pandas numpy mappy whatshap freebayes minimap2 samtools pyyaml flye
 git clone https://github.com/HaydenRJones/Hyb-alphorn.git 
 cd Hyb-alphorn
 python Hyb-alphorn.py -s SAMPLE.YAML -r REFERENCE.FASTA
